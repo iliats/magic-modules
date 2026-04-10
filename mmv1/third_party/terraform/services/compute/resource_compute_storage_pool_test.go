@@ -396,13 +396,13 @@ func testAccComputeStoragePoolTagBindingCheckConfig(resourceName string, expecte
 		BuildParent: func(rs *terraform.ResourceState) (string, error) {
 			project := rs.Primary.Attributes["project"]
 			zone := rs.Primary.Attributes["zone"]
-			name := rs.Primary.Attributes["name"]
+			id := rs.Primary.Attributes["id"]
 
-			if project == "" || zone == "" || name == "" {
-				return "", fmt.Errorf("expected project, zone, and name to be set for %s. got project=%q zone=%q name=%q", resourceName, project, zone, name)
+			if project == "" || zone == "" || id == "" {
+				return "", fmt.Errorf("expected project, zone, and id to be set for %s. got project=%q zone=%q id=%q", resourceName, project, zone, id)
 			}
 
-			return fmt.Sprintf("//compute.googleapis.com/projects/%s/zones/%s/storagePools/%s", project, zone, name), nil
+			return fmt.Sprintf("//compute.googleapis.com/projects/%s/zones/%s/storagePools/%s", project, zone, id), nil
 		},
 		GetLocation: func(rs *terraform.ResourceState) (string, error) {
 			zone := rs.Primary.Attributes["zone"]
