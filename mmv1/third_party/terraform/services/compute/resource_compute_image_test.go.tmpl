@@ -1166,12 +1166,14 @@ resource "google_tags_tag_value" "tag_value_2" {
   depends_on = [google_tags_tag_value.tag_value_1]
 }
 
-resource "google_compute_image" "image_with_resource_manager_tags" {
-  name = "tf-test-image-rmt%{random_suffix}"
+data "google_compute_image" "debian" {
+  family  = "debian-12"
+  project = "debian-cloud"
+}
 
-  raw_disk {
-    source = "https://storage.googleapis.com/bosh-gce-raw-stemcells/bosh-stemcell-97.98-google-kvm-ubuntu-xenial-go_agent-raw-1557960142.tar.gz"
-  }
+resource "google_compute_image" "image_with_resource_manager_tags" {
+  name         = "tf-test-image-rmt%{random_suffix}"
+  source_image = data.google_compute_image.debian.self_link
 
   params {
     resource_manager_tags = {
@@ -1205,12 +1207,14 @@ resource "google_tags_tag_value" "tag_value_2" {
   depends_on = [google_tags_tag_value.tag_value_1]
 }
 
-resource "google_compute_image" "image_with_resource_manager_tags" {
-  name = "tf-test-image-rmt%{random_suffix}"
+data "google_compute_image" "debian" {
+  family  = "debian-12"
+  project = "debian-cloud"
+}
 
-  raw_disk {
-    source = "https://storage.googleapis.com/bosh-gce-raw-stemcells/bosh-stemcell-97.98-google-kvm-ubuntu-xenial-go_agent-raw-1557960142.tar.gz"
-  }
+resource "google_compute_image" "image_with_resource_manager_tags" {
+  name         = "tf-test-image-rmt%{random_suffix}"
+  source_image = data.google_compute_image.debian.self_link
 
   params {
     resource_manager_tags = {
@@ -1221,20 +1225,42 @@ resource "google_compute_image" "image_with_resource_manager_tags" {
 `, context)
 }
 
-func testAccComputeImageTagBindingCheckConfig(resourceName string, expectedTagValueResources, unexpectedTagValueResources []string) acctest.TagBindingCheckConfig {
+
+func testAccComputeImageTagBindingCheckConfig(t *testing.T, resourceName string, expectedTagValueResources, unexpectedTagValueResources []string) acctest.TagBindingCheckConfig {
 	return acctest.TagBindingCheckConfig{
 		ResourceName:                resourceName,
 		ExpectedTagValueResources:   expectedTagValueResources,
 		UnexpectedTagValueResources: unexpectedTagValueResources,
 		BuildParent: func(rs *terraform.ResourceState) (string, error) {
 			project := rs.Primary.Attributes["project"]
-			id := rs.Primary.Attributes["id"]
+			name := rs.Primary.Attributes["name"]
 
-			if project == "" || id == "" {
-				return "", fmt.Errorf("expected project and id to be set for %s. got project=%q id=%q", resourceName, project, id)
+			if project == "" || name == "" {
+				return "", fmt.Errorf("expected project and name to be set for %s. got project=%q name=%q", resourceName, project, name)
 			}
 
-			return fmt.Sprintf("//compute.googleapis.com/projects/%s/global/images/%s", project, id), nil
+			config := acctest.GoogleProviderConfig(t)
+			url, err := tpgresource.ReplaceVarsForTest(config, rs, "{{ComputeBasePath}}projects/{{project}}/global/images/{{name}}")
+			if err != nil {
+				return "", err
+			}
+			res, err := transport_tpg.SendRequest(transport_tpg.SendRequestOptions{
+				Config:    config,
+				Method:    "GET",
+				RawURL:    url,
+				UserAgent: config.UserAgent,
+			})
+			if err != nil {
+				return "", err
+			}
+
+			imageID, ok := res["id"].(string)
+			if !ok || imageID == "" {
+				return "", fmt.Errorf("expected id to be set for %s. got id=%q", resourceName, res["id"])
+			}
+
+			return fmt.Sprintf("//compute.googleapis.com/projects/%s/global/images/%s", project, imageID), nil
 		},
 	}
 }
+
