@@ -808,10 +808,6 @@ func resourceComputeInstanceGroupManagerCreate(d *schema.ResourceData, meta inte
 		return err
 	}
 
-	if _, err := tpgresource.GetZone(d, config); err != nil {
-		return err
-	}
-
 	insertBody := map[string]interface{}{
 		"name":                        d.Get("name").(string),
 		"description":                 d.Get("description").(string),
@@ -820,8 +816,6 @@ func resourceComputeInstanceGroupManagerCreate(d *schema.ResourceData, meta inte
 		"listManagedInstancesResults": d.Get("list_managed_instances_results").(string),
 		"versions":                    expandVersionsV2(d.Get("version").([]interface{})),
 		"standbyPolicy":               expandStandbyPolicyV2(d),
-		"targetSuspendedSize":         int64(d.Get("target_suspended_size").(int)),
-		"targetStoppedSize":           int64(d.Get("target_stopped_size").(int)),
 		"updatePolicy":                expandUpdatePolicy(d.Get("update_policy").([]interface{})),
 		"instanceLifecyclePolicy":     expandInstanceLifecyclePolicyV2(d.Get("instance_lifecycle_policy").([]interface{})),
 		"statefulPolicy":              expandStatefulPolicyV2(d),
@@ -833,6 +827,12 @@ func resourceComputeInstanceGroupManagerCreate(d *schema.ResourceData, meta inte
 	}
 	if targetPools := tpgresource.ConvertStringSet(d.Get("target_pools").(*schema.Set)); len(targetPools) > 0 {
 		insertBody["targetPools"] = targetPools
+	}
+	if targetSuspendedSize := d.Get("target_suspended_size").(int); targetSuspendedSize > 0 {
+		insertBody["targetSuspendedSize"] = int64(targetSuspendedSize)
+	}
+	if targetStoppedSize := d.Get("target_stopped_size").(int); targetStoppedSize > 0 {
+		insertBody["targetStoppedSize"] = int64(targetStoppedSize)
 	}
 	if autoHealingPolicies := expandAutoHealingPoliciesV2(d.Get("auto_healing_policies").([]interface{})); len(autoHealingPolicies) > 0 {
 		insertBody["autoHealingPolicies"] = autoHealingPolicies
@@ -1178,10 +1178,6 @@ func resourceComputeInstanceGroupManagerUpdate(d *schema.ResourceData, meta inte
 
 	project, err := tpgresource.GetProject(d, config)
 	if err != nil {
-		return err
-	}
-
-	if _, err := tpgresource.GetZone(d, config); err != nil {
 		return err
 	}
 
@@ -1926,7 +1922,7 @@ func expandInstanceGroupManagerParamsV2(d *schema.ResourceData) map[string]inter
 		}
 	}
 
-	return nil
+	return map[string]interface{}{}
 }
 {{- end }}
 
