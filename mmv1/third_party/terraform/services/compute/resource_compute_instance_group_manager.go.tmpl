@@ -2252,7 +2252,7 @@ func expandAllInstancesConfig(old []interface{}, new []interface{}) *compute.Ins
 }
 
 func expandAllInstancesConfigV2(old []interface{}, new []interface{}) map[string]interface{} {
-	var properties map[string]interface{}
+	properties := map[string]interface{}{}
 	for _, raw := range new {
 		if raw != nil {
 			data := raw.(map[string]interface{})
@@ -2278,43 +2278,42 @@ func expandAllInstancesConfigV2(old []interface{}, new []interface{}) map[string
 		}
 	}
 
-	if properties != nil {
-		metadata := mapFromInterface(properties["metadata"])
-		labels := mapFromInterface(properties["labels"])
-		for _, raw := range old {
-			if raw != nil {
-				data := raw.(map[string]interface{})
-				for k := range data["metadata"].(map[string]interface{}) {
-					if _, exist := metadata[k]; !exist {
-						if metadata == nil {
-							metadata = map[string]interface{}{}
-						}
-						metadata[k] = nil
+	if len(properties) == 0 {
+		return nil
+	}
+
+	metadata := mapFromInterface(properties["metadata"])
+	labels := mapFromInterface(properties["labels"])
+	for _, raw := range old {
+		if raw != nil {
+			data := raw.(map[string]interface{})
+			for k := range data["metadata"].(map[string]interface{}) {
+				if _, exist := metadata[k]; !exist {
+					if metadata == nil {
+						metadata = map[string]interface{}{}
 					}
+					metadata[k] = nil
 				}
-				for k := range data["labels"].(map[string]interface{}) {
-					if _, exist := labels[k]; !exist {
-						if labels == nil {
-							labels = map[string]interface{}{}
-						}
-						labels[k] = nil
+			}
+			for k := range data["labels"].(map[string]interface{}) {
+				if _, exist := labels[k]; !exist {
+					if labels == nil {
+						labels = map[string]interface{}{}
 					}
+					labels[k] = nil
 				}
 			}
 		}
-		if metadata != nil {
-			properties["metadata"] = metadata
-		}
-		if labels != nil {
-			properties["labels"] = labels
-		}
 	}
-	if properties != nil {
-		return map[string]interface{}{
-			"properties": properties,
-		}
+	if metadata != nil {
+		properties["metadata"] = metadata
 	}
-	return nil
+	if labels != nil {
+		properties["labels"] = labels
+	}
+	return map[string]interface{}{
+		"properties": properties,
+	}
 }
 
 func flattenAllInstancesConfig(allInstancesConfig *compute.InstanceGroupManagerAllInstancesConfig) []map[string]interface{} {
